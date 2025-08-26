@@ -1,0 +1,11 @@
+name: Hata raporu
+description: Bir hatayı bildir
+labels: [bug]
+body:
+  - type: textarea
+    id: desc
+    attributes: {label: Açıklama, description: Sorunu net anlat}
+    validations: {required: true}
+  - type: textarea
+    id: steps
+    attributes: {label: Adımlar, description: Yeniden üretim adımları}

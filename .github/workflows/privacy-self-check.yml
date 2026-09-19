@@ -1,0 +1,17 @@
+name: Central Privacy Self-Check
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: central-privacy-${{ github.event_name }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  guard:
+    uses: mehmetcerdik457-ctrl/.github/.github/workflows/reusable-privacy-guard.yml@7bbe01cf14b2c45b57b8f7baffee9b9b137218e0

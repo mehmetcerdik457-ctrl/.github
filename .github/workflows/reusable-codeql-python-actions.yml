@@ -8,19 +8,39 @@ permissions:
   security-events: write
 
 jobs:
-  analyze:
+  detect:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    permissions:
+      contents: read
+    outputs:
+      python: ${{ steps.languages.outputs.python }}
+    steps:
+      - name: Checkout without persisted credentials
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Detect supported source languages
+        id: languages
+        shell: bash
+        run: |
+          set -euo pipefail
+          if git ls-files '*.py' | grep -q .; then
+            echo "python=true" >> "$GITHUB_OUTPUT"
+            echo "CODEQL_PYTHON=ENABLED"
+          else
+            echo "python=false" >> "$GITHUB_OUTPUT"
+            echo "CODEQL_PYTHON=NOT_APPLICABLE"
+          fi
+
+  actions:
     if: ${{ github.event_name != 'pull_request' || !github.event.pull_request.head.repo.fork }}
     runs-on: ubuntu-24.04
     timeout-minutes: 20
     permissions:
       contents: read
       security-events: write
-    strategy:
-      fail-fast: false
-      matrix:
-        language:
-          - python
-          - actions
     steps:
       - name: Checkout without persisted credentials
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -30,9 +50,33 @@ jobs:
       - name: Initialize CodeQL
         uses: github/codeql-action/init@b96794f015dfd88f77b49b1c93e0fa7110f94c63 # v4
         with:
-          languages: ${{ matrix.language }}
+          languages: actions
 
       - name: Analyze
         uses: github/codeql-action/analyze@b96794f015dfd88f77b49b1c93e0fa7110f94c63 # v4
         with:
-          category: "/language:${{ matrix.language }}"
+          category: "/language:actions"
+
+  python:
+    if: ${{ needs.detect.outputs.python == 'true' && (github.event_name != 'pull_request' || !github.event.pull_request.head.repo.fork) }}
+    needs: detect
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    permissions:
+      contents: read
+      security-events: write
+    steps:
+      - name: Checkout without persisted credentials
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Initialize CodeQL
+        uses: github/codeql-action/init@b96794f015dfd88f77b49b1c93e0fa7110f94c63 # v4
+        with:
+          languages: python
+
+      - name: Analyze
+        uses: github/codeql-action/analyze@b96794f015dfd88f77b49b1c93e0fa7110f94c63 # v4
+        with:
+          category: "/language:python"

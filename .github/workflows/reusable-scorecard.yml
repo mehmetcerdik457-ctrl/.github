@@ -8,6 +8,7 @@ permissions:
 
 jobs:
   scorecard:
+    if: ${{ !github.event.repository.fork }}
     runs-on: ubuntu-24.04
     timeout-minutes: 15
     permissions:

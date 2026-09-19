@@ -109,3 +109,16 @@ jobs:
 
   privacy:
     uses: ./.github/workflows/reusable-privacy-guard.yml
+
+  codeql:
+    permissions:
+      contents: read
+      security-events: write
+    uses: ./.github/workflows/reusable-codeql-python-actions.yml
+
+  dependency-review:
+    if: ${{ github.event_name == 'pull_request' }}
+    permissions:
+      contents: read
+      pull-requests: read
+    uses: ./.github/workflows/reusable-dependency-review.yml

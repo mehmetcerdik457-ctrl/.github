@@ -1,0 +1,62 @@
+name: Community Health Self-Check
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: community-health-${{ github.event_name }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+
+      - name: Validate required defaults
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          required=(
+            SECURITY.md
+            CONTRIBUTING.md
+            SUPPORT.md
+            CODE_OF_CONDUCT.md
+            profile/README.md
+            .github/pull_request_template.md
+            .github/ISSUE_TEMPLATE/config.yml
+            .github/ISSUE_TEMPLATE/bug_report.yml
+            .github/ISSUE_TEMPLATE/feature_request.yml
+            .github/ISSUE_TEMPLATE/documentation.yml
+            .github/workflows/reusable-privacy-guard.yml
+          )
+
+          for path in "${required[@]}"; do
+            test -s "$path" || {
+              echo "MISSING_OR_EMPTY=$path" >&2
+              exit 1
+            }
+          done
+
+          for form in .github/ISSUE_TEMPLATE/*.yml; do
+            [ "$(basename "$form")" = "config.yml" ] && continue
+            grep -Eq '^name:[[:space:]]+.+' "$form"
+            grep -Eq '^description:[[:space:]]+.+' "$form"
+            if grep -Eq '^labels:' "$form"; then
+              echo "DEFAULT_FORM_LABEL_DEPENDENCY_FORBIDDEN=$form" >&2
+              exit 1
+            fi
+          done
+
+          grep -q '^blank_issues_enabled: false$' .github/ISSUE_TEMPLATE/config.yml
+          echo 'COMMUNITY_HEALTH_BASELINE=PASS'

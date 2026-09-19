@@ -1,6 +1,7 @@
 name: Documentation
-description: Report missing, incorrect, or unclear documentation
+description: Report missing, incorrect, or unclear documentation.
 title: "[DOCS] "
+labels: []
 body:
   - type: textarea
     id: location
@@ -23,3 +24,10 @@ body:
       description: What should the documentation explain or contain?
     validations:
       required: true
+  - type: checkboxes
+    id: hygiene
+    attributes:
+      label: Security hygiene
+      options:
+        - label: I did not include credentials, private keys, keystores, recovery codes, or other secrets.
+          required: true

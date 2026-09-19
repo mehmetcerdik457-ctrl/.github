@@ -1,0 +1,77 @@
+name: Reusable Dependency Review
+
+on:
+  workflow_call:
+    outputs:
+      state:
+        description: Dependency Review capability state
+        value: ${{ jobs.capability.outputs.state }}
+
+permissions:
+  contents: read
+  pull-requests: read
+
+jobs:
+  capability:
+    if: ${{ github.event_name == 'pull_request' }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    permissions:
+      contents: read
+    outputs:
+      enabled: ${{ steps.probe.outputs.enabled }}
+      state: ${{ steps.probe.outputs.state }}
+    steps:
+      - name: Probe Dependency Graph capability
+        id: probe
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          code="$(curl --connect-timeout 10 --max-time 30 -sS -o /tmp/sbom.json -w '%{http_code}' \
+            -H 'Accept: application/vnd.github+json' \
+            -H "Authorization: Bearer ${GH_TOKEN}" \
+            -H 'X-GitHub-Api-Version: 2026-03-10' \
+            "https://api.github.com/repos/${GITHUB_REPOSITORY}/dependency-graph/sbom" || true)"
+
+          case "$code" in
+            200)
+              echo "DEPENDENCY_REVIEW_CAPABILITY=ENABLED"
+              echo "enabled=true" >> "$GITHUB_OUTPUT"
+              echo "state=ENABLED" >> "$GITHUB_OUTPUT"
+              ;;
+            403|404)
+              echo "::warning title=Dependency Review unavailable::Enable Dependency Graph in repository Security settings before treating Dependency Review as an active security gate."
+              echo "DEPENDENCY_REVIEW_CAPABILITY=USER_ACTION_REQUIRED HTTP=$code"
+              echo "enabled=false" >> "$GITHUB_OUTPUT"
+              echo "state=USER_ACTION_REQUIRED" >> "$GITHUB_OUTPUT"
+              ;;
+            *)
+              echo "::error title=Dependency Graph probe failed::Unexpected HTTP status $code"
+              echo "enabled=false" >> "$GITHUB_OUTPUT"
+              echo "state=PROBE_FAILED_HTTP_$code" >> "$GITHUB_OUTPUT"
+              exit 1
+              ;;
+          esac
+
+  review:
+    if: ${{ github.event_name == 'pull_request' && needs.capability.outputs.enabled == 'true' }}
+    needs: capability
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    permissions:
+      contents: read
+      pull-requests: read
+    steps:
+      - name: Checkout without persisted credentials
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Review dependency changes
+        uses: actions/dependency-review-action@a1d282b36b6f3519aa1f3fc636f609c47dddb294
+        with:
+          fail-on-severity: low
+          retry-on-snapshot-warnings: true
+          retry-on-snapshot-warnings-timeout: 180

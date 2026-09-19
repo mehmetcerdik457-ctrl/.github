@@ -1,0 +1,37 @@
+name: Reusable Privacy Guard
+
+on:
+  workflow_call:
+
+permissions:
+  contents: read
+
+jobs:
+  guard:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Reject private-state filenames
+        shell: bash
+        run: |
+          set -euo pipefail
+          forbidden='(^|/)(\.env($|\.)|.*\.(keystore|jks|pem|p12|pfx|db|sqlite|sqlite3))$'
+          if git ls-files | grep -E "$forbidden"; then
+            echo "Forbidden private-state file is tracked."
+            exit 1
+          fi
+
+      - name: Scan text files for obvious credential markers
+        shell: bash
+        run: |
+          set -euo pipefail
+          if git grep -I -n -E 'BEGIN (RSA |EC |OPENSSH )?PRIVATE KEY|ghp_[A-Za-z0-9]{20,}|github_pat_[A-Za-z0-9_]{20,}|AKIA[0-9A-Z]{16}' -- .; then
+            echo "Potential credential material detected."
+            exit 1
+          fi
+          echo "PRIVACY_GUARD=PASS"

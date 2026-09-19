@@ -1,0 +1,33 @@
+name: Documentation
+description: Report missing, incorrect, or unclear documentation.
+title: "[DOCS] "
+labels: []
+body:
+  - type: textarea
+    id: location
+    attributes:
+      label: Documentation location
+      description: File, page, command, workflow, or section that needs attention.
+    validations:
+      required: true
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem
+      description: What is missing, wrong, stale, or unclear?
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected documentation
+      description: What should the documentation explain or contain?
+    validations:
+      required: true
+  - type: checkboxes
+    id: hygiene
+    attributes:
+      label: Security hygiene
+      options:
+        - label: I did not include credentials, private keys, keystores, recovery codes, or other secrets.
+          required: true

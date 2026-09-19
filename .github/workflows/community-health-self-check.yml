@@ -33,10 +33,11 @@ jobs:
             SUPPORT.md
             CODE_OF_CONDUCT.md
             profile/README.md
-            .github/pull_request_template.md
+            .github/CODEOWNERS
+            .github/PULL_REQUEST_TEMPLATE.md
             .github/ISSUE_TEMPLATE/config.yml
-            .github/ISSUE_TEMPLATE/bug_report.yml
-            .github/ISSUE_TEMPLATE/feature_request.yml
+            .github/ISSUE_TEMPLATE/bug.yml
+            .github/ISSUE_TEMPLATE/feature.yml
             .github/ISSUE_TEMPLATE/documentation.yml
             .github/workflows/reusable-privacy-guard.yml
           )
@@ -48,12 +49,23 @@ jobs:
             }
           done
 
-          for form in .github/ISSUE_TEMPLATE/*.yml; do
-            [ "$(basename "$form")" = "config.yml" ] && continue
+          duplicates=(
+            .github/ISSUE_TEMPLATE/bug_report.yml
+            .github/ISSUE_TEMPLATE/feature_request.yml
+            .github/pull_request_template.md
+          )
+          for path in "${duplicates[@]}"; do
+            if [ -e "$path" ]; then
+              echo "DUPLICATE_GOVERNANCE_FILE=$path" >&2
+              exit 1
+            fi
+          done
+
+          for form in             .github/ISSUE_TEMPLATE/bug.yml             .github/ISSUE_TEMPLATE/feature.yml             .github/ISSUE_TEMPLATE/documentation.yml; do
             grep -Eq '^name:[[:space:]]+.+' "$form"
             grep -Eq '^description:[[:space:]]+.+' "$form"
-            if grep -Eq '^labels:' "$form"; then
-              echo "DEFAULT_FORM_LABEL_DEPENDENCY_FORBIDDEN=$form" >&2
+            if grep -Eq '^labels:[[:space:]]*\[[^]]+\]' "$form"; then
+              echo "NONEMPTY_DEFAULT_LABEL_DEPENDENCY_FORBIDDEN=$form" >&2
               exit 1
             fi
           done

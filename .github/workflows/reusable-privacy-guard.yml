@@ -20,7 +20,19 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          forbidden='(^|/)(\.env($|\.)|.*\.(keystore|jks|pem|p12|pfx|db|sqlite|sqlite3))$'
+
+          # Permit documented placeholders while rejecting real environment files.
+          env_files="$(git ls-files | grep -E '(^|/)\.env($|\.)' || true)"
+          if [ -n "$env_files" ]; then
+            unsafe_env="$(printf '%s\n' "$env_files" | grep -Ev '(^|/)\.env\.(example|sample|template)$' || true)"
+            if [ -n "$unsafe_env" ]; then
+              printf '%s\n' "$unsafe_env"
+              echo "Forbidden environment file is tracked."
+              exit 1
+            fi
+          fi
+
+          forbidden='(^|/)(id_(rsa|ed25519)|key\.properties|credentials[^/]*\.json|service[-_]?account[^/]*\.json|.*\.(keystore|jks|pem|p12|pfx|db|sqlite|sqlite3))$'
           if git ls-files | grep -E "$forbidden"; then
             echo "Forbidden private-state file is tracked."
             exit 1
@@ -30,7 +42,8 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          if git grep -I -n -E 'BEGIN (RSA |EC |OPENSSH )?PRIVATE KEY|ghp_[A-Za-z0-9]{20,}|github_pat_[A-Za-z0-9_]{20,}|AKIA[0-9A-Z]{16}' -- .; then
+          markers='BEGIN (RSA |EC |OPENSSH )?PRIVATE KEY|ghp_[A-Za-z0-9]{20,}|github_pat_[A-Za-z0-9_]{20,}|AKIA[0-9A-Z]{16}|sk-(proj-)?[A-Za-z0-9_-]{20,}|hf_[A-Za-z0-9]{20,}|npm_[A-Za-z0-9]{20,}|sk_live_[A-Za-z0-9]{16,}|xox[baprs]-[A-Za-z0-9-]{20,}'
+          if git grep -I -n -E "$markers" -- .; then
             echo "Potential credential material detected."
             exit 1
           fi

@@ -56,6 +56,7 @@ jobs:
               Path(".github/workflows/reusable-scorecard.yml"),
               Path(".github/workflows/reusable-codeql-python-actions.yml"),
               Path(".github/workflows/reusable-dependency-review.yml"),
+              Path(".github/workflows/reusable-repository-policy.yml"),
           ]
           missing = [str(p) for p in required if not p.is_file()]
           if missing:
@@ -122,3 +123,10 @@ jobs:
       contents: read
       pull-requests: read
     uses: ./.github/workflows/reusable-dependency-review.yml
+
+  repository-policy:
+    permissions:
+      contents: read
+    uses: ./.github/workflows/reusable-repository-policy.yml
+    with:
+      require-governance: true
